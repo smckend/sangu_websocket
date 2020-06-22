@@ -4,13 +4,14 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:sangu_websocket/sangu_websocket.dart';
+import 'package:sangu_websocket/src/clients/mopidy_json_rpc_client.dart';
+import 'package:sangu_websocket/src/services/mopidy_rpc_service.dart';
 
-import 'mopidy_event_stream.dart';
-import 'mopidy_rpc_client.dart';
+import 'utils/mopidy_event_stream.dart';
 
 class MopidyWebSocket extends SanguWebSocket {
   Uri webSocketUri;
-  MopidyRpcClient _rpcClient;
+  MopidyRpcService _rpcService;
   MopidyEventMapper _sanguEventStream;
   StreamSubscription _eventStreamSubscription;
   Stream _stream;
@@ -45,21 +46,15 @@ class MopidyWebSocket extends SanguWebSocket {
   Future _initStream() async {
     _eventStreamSubscription?.cancel();
     await _sanguEventStream?.close();
-    if (_rpcClient != null && !_rpcClient.isClosed) await _rpcClient?.close();
 
     print("Starting streams...");
-    _rpcClient = MopidyRpcClient(webSocketUri: webSocketUri);
+    MopidyHttpRpcClient _mopidyHttpRpcClient = MopidyHttpRpcClient(
+      scheme: webSocketUri.scheme == "ws" ? "http" : "https",
+      host: webSocketUri.host,
+      port: webSocketUri.port,
+    );
+    _rpcService = MopidyRpcService(rpcClient: _mopidyHttpRpcClient);
     _sanguEventStream = MopidyEventMapper(webSocketUri: webSocketUri);
-    _rpcClient.listen()
-      ..catchError((error) {
-        _handleError(error);
-      })
-      ..whenComplete(() async {
-        _handleClose(
-          code: _rpcClient.closeCode,
-          reason: _rpcClient.closeReason,
-        );
-      });
     _eventStreamSubscription = _sanguEventStream.stream.listen(
       (event) {
         if (event is Equatable) _streamController.add(event);
@@ -75,12 +70,16 @@ class MopidyWebSocket extends SanguWebSocket {
         );
       },
     );
-    await Future.delayed(const Duration(milliseconds: 800), () {
-      if (!_rpcClient.isClosed) {
-        _reconnectRetryAttempts = 0;
-        _streamController.add(WebSocketConnected());
-      }
-    });
+    await Future.delayed(
+      const Duration(milliseconds: 800),
+      () {
+        if (_sanguEventStream.closeCode == null) {
+          _reconnectRetryAttempts = 0;
+          _streamController.add(WebSocketConnected());
+        }
+      },
+    );
+    print("Finished starting streams...");
   }
 
   Stream get stream => _stream;
@@ -88,30 +87,29 @@ class MopidyWebSocket extends SanguWebSocket {
   bool get isConnected => !_streamController.isClosed;
 
   resumePlayback() async {
-    _rpcClient.resume();
+    _rpcService.resume();
   }
 
   pausePlayback() async {
-    _rpcClient.pause();
+    _rpcService.pause();
   }
 
   playTrack() async {
-    _rpcClient.play();
+    _rpcService.play();
   }
 
   nextTrack() async {
-    _rpcClient.next();
+    _rpcService.next();
   }
 
   getCurrentState() async {
-    _rpcClient.getState.then((result) {
-      String state = result;
+    _rpcService.getState.then((state) {
       _streamController.add(TrackPlaybackChange(state: state));
     });
   }
 
   search(Map query) async {
-    _rpcClient.search(query: query).then(
+    _rpcService.search(query: query).then(
       (result) {
         List listResult = result;
         List<SearchResult> searchResults = List();
@@ -135,8 +133,8 @@ class MopidyWebSocket extends SanguWebSocket {
   }
 
   getTrackList() async {
-    _rpcClient.getIndex().then(
-          (index) => _rpcClient.getSliceOfTlTracks(start: index).then(
+    _rpcService.getIndex().then(
+          (index) => _rpcService.getSliceOfTlTracks(start: index).then(
             (result) {
               List listOfRawTracks = result;
               var trackList = listOfRawTracks?.map((dynamic rawTrack) {
@@ -149,7 +147,7 @@ class MopidyWebSocket extends SanguWebSocket {
   }
 
   getImages(List<String> uris) async {
-    _rpcClient.getImages(uris).then((result) {
+    _rpcService.getImages(uris).then((result) {
       var artwork = Map<String, Images>();
       (result as Map)?.forEach((uri, images) {
         var imageList = images as List;
@@ -175,26 +173,26 @@ class MopidyWebSocket extends SanguWebSocket {
   }
 
   addTrackToTrackList(Track track) async {
-    _rpcClient.add([track.uri]).then((result) {
+    _rpcService.add([track.uri]).then((result) {
       print("Added '${track.name}' to tracklist");
     });
   }
 
   removeTrackFromTrackList(TlTrack tlTrack) async {
-    _rpcClient.remove([tlTrack.trackListId]).then((result) {
+    _rpcService.remove([tlTrack.trackListId]).then((result) {
       print("Removed '${tlTrack.track.name}' from tracklist");
     });
   }
 
   playTrackIfNothingElseIsPlaying() async {
-    _rpcClient.getTlTracks.then((result) {
+    _rpcService.getTlTracks.then((result) {
       List listOfRawTracks = result;
-      if (listOfRawTracks.length == 1) _rpcClient.play();
+      if (listOfRawTracks.length == 1) _rpcService.play();
     });
   }
 
   getTimePosition() async {
-    _rpcClient.getTimePosition.then((position) {
+    _rpcService.getTimePosition.then((position) {
       _streamController.add(Seeked(position: position));
     });
   }
@@ -202,7 +200,6 @@ class MopidyWebSocket extends SanguWebSocket {
   void dispose() async {
     _eventStreamSubscription?.cancel();
     _streamController?.close();
-    _rpcClient?.close();
     _sanguEventStream?.close();
   }
 }
