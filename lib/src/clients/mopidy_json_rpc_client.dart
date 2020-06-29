@@ -5,31 +5,17 @@ import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 
 class MopidyHttpRpcClient {
-  final String scheme;
-  final String host;
-  final int port;
-  final String basePath;
+  final Uri uri;
   final Uuid _uuid = Uuid();
 
-  MopidyHttpRpcClient({
-    @required this.scheme,
-    @required this.host,
-    @required this.port,
-    this.basePath = "",
-  });
+  MopidyHttpRpcClient({@required this.uri});
 
   Future<dynamic> callMethod(
     String method, {
     Map params = const {},
   }) async {
-    Uri postUri = Uri(
-      scheme: scheme,
-      host: host,
-      port: port,
-      path: basePath + "/mopidy/rpc",
-    );
     http.Response response = await http.post(
-      postUri,
+      uri,
       headers: {
         "Content-Type": "application/json",
       },
@@ -49,14 +35,8 @@ class MopidyHttpRpcClient {
     String method, {
     Map params = const {},
   }) async {
-    Uri postUri = Uri(
-      scheme: scheme,
-      host: host,
-      port: port,
-      path: basePath + "/mopidy/rpc",
-    );
     await http.post(
-      postUri,
+      uri,
       headers: {
         "Content-Type": "application/json",
       },

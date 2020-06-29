@@ -1,8 +1,6 @@
 import 'dart:async';
 
 import 'package:equatable/equatable.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:sangu_websocket/sangu_websocket.dart';
 import 'package:sangu_websocket/src/clients/mopidy_json_rpc_client.dart';
 import 'package:sangu_websocket/src/services/mopidy_rpc_service.dart';
@@ -10,7 +8,9 @@ import 'package:sangu_websocket/src/services/mopidy_rpc_service.dart';
 import 'utils/mopidy_event_stream.dart';
 
 class MopidyWebSocket extends SanguWebSocket {
-  Uri webSocketUri;
+  final String scheme;
+  final String host;
+  final int port;
   MopidyRpcService _rpcService;
   MopidyEventMapper _sanguEventStream;
   StreamSubscription _eventStreamSubscription;
@@ -21,7 +21,11 @@ class MopidyWebSocket extends SanguWebSocket {
 
   StreamController<Equatable> _streamController = StreamController.broadcast();
 
-  MopidyWebSocket({@required this.webSocketUri}) {
+  MopidyWebSocket({
+    this.scheme,
+    this.host,
+    this.port,
+  }) {
     _stream = _streamController.stream;
     _initStream();
   }
@@ -49,12 +53,22 @@ class MopidyWebSocket extends SanguWebSocket {
 
     print("Starting streams...");
     MopidyHttpRpcClient _mopidyHttpRpcClient = MopidyHttpRpcClient(
-      scheme: webSocketUri.scheme == "ws" ? "http" : "https",
-      host: webSocketUri.host,
-      port: webSocketUri.port,
+      uri: Uri(
+        scheme: scheme,
+        host: host,
+        port: port,
+        path: "/mopidy/rpc",
+      ),
     );
     _rpcService = MopidyRpcService(rpcClient: _mopidyHttpRpcClient);
-    _sanguEventStream = MopidyEventMapper(webSocketUri: webSocketUri);
+    _sanguEventStream = MopidyEventMapper(
+      webSocketUri: Uri(
+        scheme: scheme == "https" ? "wss" : "ws",
+        host: host,
+        port: port,
+        path: "/mopidy/ws",
+      ),
+    );
     _eventStreamSubscription = _sanguEventStream.stream.listen(
       (event) {
         if (event is Equatable) _streamController.add(event);
