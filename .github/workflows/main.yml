@@ -1,4 +1,4 @@
-name: Build Mopidy Sangu
+name: Build Sangu Websocket
 on:
   push:
     branches:
