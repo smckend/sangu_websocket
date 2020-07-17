@@ -1,0 +1,24 @@
+name: Build Mopidy Sangu
+on:
+  push:
+    branches:
+      - master
+      - 'fix/**'
+      - 'feat/**'
+
+jobs:
+  build_ui:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+#      with:
+#        persist-credentials: false
+    - uses: actions/setup-java@v1
+      with:
+        java-version: '12.x'
+    - uses: subosito/flutter-action@v1.3.2
+      with:
+        channel: 'beta'
+    - run: flutter config --enable-web
+    - run: flutter pub get
+    - run: flutter test
