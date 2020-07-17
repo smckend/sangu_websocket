@@ -1,8 +1,9 @@
 import 'dart:async';
 
 import 'package:equatable/equatable.dart';
+import 'package:http/http.dart';
 import 'package:sangu_websocket/sangu_websocket.dart';
-import 'package:sangu_websocket/src/clients/mopidy_json_rpc_client.dart';
+import 'package:sangu_websocket/src/clients/http_rpc_client.dart';
 import 'package:sangu_websocket/src/services/mopidy_rpc_service.dart';
 
 import 'utils/mopidy_event_stream.dart';
@@ -52,7 +53,8 @@ class MopidyWebSocket extends SanguWebSocket {
     await _sanguEventStream?.close();
 
     print("Starting streams...");
-    MopidyHttpRpcClient _mopidyHttpRpcClient = MopidyHttpRpcClient(
+    HttpRpcClient _mopidyHttpRpcClient = HttpRpcClient(
+      client: Client(),
       uri: Uri(
         scheme: scheme,
         host: host,

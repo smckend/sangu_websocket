@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:sangu_websocket/sangu_websocket.dart';
-import 'package:sangu_websocket/src/clients/mopidy_json_rpc_client.dart';
+import 'package:sangu_websocket/src/clients/http_rpc_client.dart';
 
 class MopidyRpcService {
-  final MopidyHttpRpcClient rpcClient;
+  final HttpRpcClient rpcClient;
 
   MopidyRpcService({@required this.rpcClient});
 
