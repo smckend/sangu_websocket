@@ -137,7 +137,8 @@ class MopidyWebSocket extends SanguWebSocket {
               (rawTrack) {
                 Track track = Track.fromJson(rawTrack);
                 searchResults.add(
-                    SearchResult(track: track, searchBackend: searchBackend));
+                  SearchResult(track: track, searchBackend: searchBackend),
+                );
               },
             );
           },

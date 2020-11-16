@@ -55,12 +55,14 @@ class MopidyRpcService {
   Future search({Map query, List uris = const []}) {
     Map params = {
       "query": query,
-      "exact": false
+      "exact": false,
     };
     if (uris.length > 0)
-      params.addAll({
-        "uris": uris
-      });
+      params.addAll(
+        {
+          "uris": uris,
+        },
+      );
     return rpcClient.callMethod(
       "core.library.search",
       params: params,
